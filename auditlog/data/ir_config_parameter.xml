@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+
+  <record id="forbbiden_types" model="ir.config_parameter">
+    <field name="key">audit.log.forbidden.types</field>
+    <field name="value"></field>
+  </record>
+
+  <record id="only_text_value" model="ir.config_parameter">
+    <field name="key">audit.log.only.text.value</field>
+    <field name="value">0</field>
+  </record>
+
+</odoo>

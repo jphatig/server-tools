@@ -1,7 +1,7 @@
 # Copyright 2015 ABF OSIELL <https://osiell.com>
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
-from odoo import models, fields, api, modules, _
+from odoo import models, fields, api, modules, osv, _
 
 FIELDS_BLACKLIST = [
     'id', 'create_uid', 'create_date', 'write_uid', 'write_date',
@@ -384,8 +384,13 @@ class AuditlogRule(models.Model):
             field_model = self.env['ir.model.fields']
             all_model_ids = [model.id]
             all_model_ids.extend(model.inherited_model_ids.ids)
-            field = field_model.search(
-                [('model_id', 'in', all_model_ids), ('name', '=', field_name)])
+            domain = [('model_id', 'in', all_model_ids), ('name', '=', field_name)]
+            forbbiden_types = self.env.ref('auditlog.forbbiden_types').value
+            if forbbiden_types:
+                domain = osv.expression.AND([[
+                    ('ttype', 'not in', forbbiden_types.split(','))
+                ], domain])
+            field = field_model.search(domain)
             # The field can be a dummy one, like 'in_group_X' on 'res.users'
             # As such we can't log it (field_id is required to create a log)
             if not field:
@@ -473,6 +478,7 @@ class AuditlogRule(models.Model):
             new_value_text = self.env[field['relation']].browse(
                 vals['new_value']).name_get()
             vals['new_value_text'] = new_value_text
+        self.clean_x_value(vals)
         return vals
 
     def _create_log_line_on_create(
@@ -506,7 +512,16 @@ class AuditlogRule(models.Model):
             new_value_text = self.env[field['relation']].browse(
                 vals['new_value']).name_get()
             vals['new_value_text'] = new_value_text
+        self.clean_x_value(vals)
         return vals
+
+    def clean_x_value(self, vals):
+        """Remove non text value from vals dict"""
+        if self.env.ref('auditlog.only_text_value').value == '1':
+            vals.update({
+                'old_value': False,
+                'new_value': False
+            })
 
     @api.multi
     def subscribe(self):
